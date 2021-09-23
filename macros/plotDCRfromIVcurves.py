@@ -28,15 +28,16 @@ ROOT.gROOT.SetBatch(True)
 def Gain(vov, irr):
     gain = (50738.5+95149*vov)  
     if irr == '2E14':
-        gain = gain/1.3
+        gain = gain*0.7
     return gain
 
 def DCR(I, gain):
     return (I*0.001/16/(1.602E-19*gain)/1000000000)
 
 
-irr  = '2E13'
+irr  = '1E13'
 temp = '-25'
+#temp = '-40'
 
 Vbd = {'ch3': 36.69, 
        'ch4': 36.76}
@@ -63,16 +64,22 @@ print fileList
 g_I_vs_Vbias = {}
 g_I_vs_Vov = {}
 g_DCR_vs_Vov = {}
+g_I_vs_VovEff = {}
+g_DCR_vs_VovEff = {}
 
 for ch in ['ch3','ch4']:
     g_I_vs_Vov[ch] = ROOT.TGraphErrors()
     g_DCR_vs_Vov[ch] = ROOT.TGraphErrors()
+    g_I_vs_VovEff[ch] = ROOT.TGraphErrors()
+    g_DCR_vs_VovEff[ch] = ROOT.TGraphErrors()
     if (ch == 'ch3'): 
         g_I_vs_Vov[ch].SetMarkerStyle(20)
         g_DCR_vs_Vov[ch].SetMarkerStyle(20)
+        g_DCR_vs_VovEff[ch].SetMarkerStyle(20)
     if (ch == 'ch4'): 
         g_I_vs_Vov[ch].SetMarkerStyle(24)
         g_DCR_vs_Vov[ch].SetMarkerStyle(24)
+        g_DCR_vs_VovEff[ch].SetMarkerStyle(24)
         
     f = ROOT.TFile.Open(inputDir+'/'+fileList[ch][-1])
     g_I_vs_Vbias[ch] = f.Get('g_IV')
@@ -91,16 +98,21 @@ for ch in ['ch3','ch4']:
         I_array = g_I_vs_Vbias[ch].Eval(vbias)/1000.
         gain = Gain(vov, irr)
         dcr  = DCR(I_array, gain)
-        #dcr_err = 0.5*(DCR(I_array+I_array_err, gain)-DCR(I_array-I_array_err, gain))
         dcr_err = 0
-        #print vov, dcr
         g_I_vs_Vov[ch].SetPoint(g_I_vs_Vov[ch].GetN(), vov, I_array)
         g_I_vs_Vov[ch].SetPointError(g_I_vs_Vov[ch].GetN()-1, 0, 0)
 
         g_DCR_vs_Vov[ch].SetPoint(g_DCR_vs_Vov[ch].GetN(), vov, dcr)
         g_DCR_vs_Vov[ch].SetPoint(g_DCR_vs_Vov[ch].GetN(), 0, dcr_err)
 
-
+        vov_eff = vov - (I_array * 10)/1000. - (I_array/16 * 68.)/1000 # deltaVdrop = I_array/R with R = 10 ohm
+        gain = Gain(vov_eff, irr)
+        dcr  = DCR(I_array, gain)
+        g_I_vs_VovEff[ch].SetPoint(g_I_vs_VovEff[ch].GetN(), vov_eff, I_array)
+        g_I_vs_VovEff[ch].SetPoint(g_I_vs_VovEff[ch].GetN(), 0, 0) 
+        
+        g_DCR_vs_VovEff[ch].SetPoint(g_DCR_vs_VovEff[ch].GetN(), vov_eff, dcr)
+        g_DCR_vs_VovEff[ch].SetPoint(g_DCR_vs_VovEff[ch].GetN(), 0, dcr_err) 
 
 c1 = ROOT.TCanvas()
 c1.SetGridx()
@@ -125,9 +137,25 @@ hdummy2.Draw()
 g_DCR_vs_Vov['ch3'].Draw('psame')
 g_DCR_vs_Vov['ch4'].Draw('psame')
 
+
+c22 = ROOT.TCanvas()
+c22.SetGridx()
+c22.SetGridy()
+max = g_DCR_vs_VovEff['ch3'].GetY()[g_DCR_vs_VovEff['ch3'].GetN()-2]* 1.5
+hdummy2.Draw()
+g_DCR_vs_VovEff['ch3'].Draw('psame')
+g_DCR_vs_VovEff['ch4'].Draw('psame')
+
 outfile.cd()
 g_DCR_vs_Vov['ch3'].Write('g_DCR_vs_Vov_ch3')
 g_DCR_vs_Vov['ch4'].Write('g_DCR_vs_Vov_ch4')  
+g_DCR_vs_VovEff['ch3'].Write('g_DCR_vs_VovEff_ch3')
+g_DCR_vs_VovEff['ch4'].Write('g_DCR_vs_VovEff_ch4')  
+g_I_vs_Vov['ch3'].Write('g_I_vs_Vov_ch3')
+g_I_vs_Vov['ch4'].Write('g_I_vs_Vov_ch4')  
+g_I_vs_VovEff['ch3'].Write('g_I_vs_VovEff_ch3')
+g_I_vs_VovEff['ch4'].Write('g_I_vs_VovEff_ch4')  
+
 outfile.Close()
 
 c1.SaveAs(outDir+'/Iarray_vs_Vov.png')
@@ -135,6 +163,9 @@ c1.SaveAs(outDir+'/Iarray_vs_Vov.pdf')
 
 c2.SaveAs(outDir+'/DCR_vs_Vov.png')
 c2.SaveAs(outDir+'/DCR_vs_Vov.pdf')
+
+c22.SaveAs(outDir+'/DCR_vs_VovEff.png')
+c22.SaveAs(outDir+'/DCR_vs_VovEff.pdf')
 
 raw_input('OK?')
 

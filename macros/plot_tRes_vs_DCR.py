@@ -28,28 +28,61 @@ ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 Vov = 1.50
 
-file_dict = {'../plots/HPK_unirr_52deg_T5C_summaryPlots.root' : '',
-             '../plots/HPK_1E13_52deg_T-40C_summaryPlots.root': '../plots/DCR_vs_Vov_HPK_1E13_52deg_T-40C.root',
-             '../plots/HPK_1E13_52deg_T-25C_summaryPlots.root': '../plots/DCR_vs_Vov_HPK_1E13_52deg_T-25C.root',
-             '../plots/HPK_1E13_52deg_T0C_summaryPlots.root'  : '../plots/DCR_vs_Vov_HPK_1E13_52deg_T0C.root'} 
-
+temperatures = [0, -25, -40]
 
 tRes = {}
 err_dcr = {}
-for f1,f2 in file_dict.items():
-    print f1, f2
-    if ('unirr' not in f1):
-        fDCR = ROOT.TFile.Open(f2)
-        dcr = 0.5 * ( (fDCR.Get('g_DCR_vs_Vov_ch3')).Eval(Vov) + (fDCR.Get('g_DCR_vs_Vov_ch4')).Eval(Vov))
-        err_dcr[dcr] = 0.5 * abs(( (fDCR.Get('g_DCR_vs_Vov_ch3')).Eval(Vov) - (fDCR.Get('g_DCR_vs_Vov_ch4')).Eval(Vov)) )
+
+# un-irradiated SiPMs - No DCR
+fRes0 = ROOT.TFile.Open('../plots/HPK_unirr_52deg_T5C_summaryPlots.root') 
+g = fRes0.Get('g_deltaT_energyRatioCorr_bestTh_vs_bar_Vov%.02f_enBin01'%Vov)                                                                 
+if (g != None): 
+    fitTemp = ROOT.TF1('fitTemp','pol0', 0, 16)
+    g.Fit(fitTemp,'QSR')
+    tRes[0.0] = [fitTemp.GetParameter(0), fitTemp.GetParError(0)]
+    #tRes[0.0] = [g.GetMean(2) , g.GetRMS(2)/math.sqrt(16) ]   
+    err_dcr[0.0] = 0.001
+    
+dcr0 = 0
+scaled_dcr = 0
+
+for temp in temperatures:
+    
+    print '>>>>>> T = ', temp
+
+    if (temp == 0): 
+        Vov = 1.75
     else:
-        dcr = 0
-        err_dcr[dcr] = 0.0
-    fRes = ROOT.TFile.Open(f1)     
-    #tRes[dcr] = {}
+        Vov = 1.50
+
+    fDCR = ROOT.TFile.Open('../plots/DCR_vs_Vov_HPK_1E13_52deg_T%dC.root'%temp)
+
+    I_array = 0.5 * ( (fDCR.Get('g_I_vs_Vov_ch3')).Eval(Vov) + (fDCR.Get('g_I_vs_Vov_ch4')).Eval(Vov)) 
+    VovEff  = Vov - (I_array*10)/1000 - (I_array/16*68)/1000
+    print temp, Vov, VovEff
+    dcr = 0.5 * ( (fDCR.Get('g_DCR_vs_VovEff_ch3')).Eval(VovEff) + (fDCR.Get('g_DCR_vs_VovEff_ch4')).Eval(VovEff))
+    err_dcr[dcr] = 0.5 * abs(( (fDCR.Get('g_DCR_vs_VovEff_ch3')).Eval(VovEff) - (fDCR.Get('g_DCR_vs_VovEff_ch4')).Eval(VovEff)) )
+
+    print 'dcr = ', dcr
+
+    if (temp == 0 ): 
+        dcr0 = dcr
+    else:
+        scaled_dcr = dcr0 / (2.*(0-temp)/10)
+        print temp, VovEff, dcr, scaled_dcr
+        #err_dcr[scaled_dcr] = err_dcr[dcr]
+        #dcr = scaled_dcr
+ 
+
+    # get tRes
+    fRes = ROOT.TFile.Open('../plots/HPK_1E13_52deg_T%dC_summaryPlots.root'%temp)
     g = fRes.Get('g_deltaT_energyRatioCorr_bestTh_vs_bar_Vov%.02f_enBin01'%Vov)
     if (g == None): continue
-    tRes[dcr] = [g.GetMean(2) , g.GetRMS(2)/math.sqrt(16) ]
+    fitTemp = ROOT.TF1('fitTemp','pol0', 0, 16)
+    g.Fit(fitTemp,'QSR')
+    tRes[dcr] = [fitTemp.GetParameter(0), fitTemp.GetParError(0)]   
+    #tRes[dcr] = [g.GetMean(2) , g.GetRMS(2)/math.sqrt(16) ]    
+
 
 #sorted(tRes.items(), key=lambda x: x[1])
 print tRes
@@ -71,11 +104,13 @@ for dcr in sorted(tRes):
 
 
 fitFun = ROOT.TF1('fitFun','[0] * pow(x,[1])',0,100)
+fitFun.SetNpx(1000)
+fitFun.SetLineWidth(1)
 fitFun.SetLineStyle(2)
 fitFun.SetLineColor(2)
-fitFun.SetParameter(0,20)
+fitFun.SetParameter(0,30)
 fitFun.SetParameter(1,0.5)
-g.Fit(fitFun)
+g.Fit(fitFun,'RS')
 
 
 c = ROOT.TCanvas('c','c',600,600)
@@ -84,7 +119,9 @@ g.SetMarkerSize(1)
 g.GetXaxis().SetTitle('DCR [GHz]')
 g.GetYaxis().SetTitle('#sigma_{DCR} [ps]')
 g.GetYaxis().SetRangeUser(0,180)
+g.GetXaxis().SetRangeUser(0,50)
 g.Draw('ap')
+#fitFun.Draw('same')
 c.Update()
 st = g.FindObject("stats")
 st.SetX1NDC(0.7) 

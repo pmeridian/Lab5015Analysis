@@ -52,6 +52,8 @@ for i,label in enumerate(labels):
         htemp = ROOT.TH1F('htemp','',1000,0,1000)
         for bar in range(0,15):
             gg = f[label].Get('g_deltaT_energyRatioCorr_vs_th_bar%02d_Vov1.50_enBin01'%bar)
+            if ('1E13' in label):
+                gg = f[label].Get('g_deltaT_energyRatioCorr_vs_th_bar%02d_Vov1.75_enBin01'%bar) 
             if (gg == None): continue
             htemp.Fill( gg.Eval(thr))
         g[label].SetPoint(g[label].GetN(), thr, htemp.GetMean())
