@@ -30,11 +30,6 @@
 #include "TLine.h"
 #include "TRandom3.h"
 
-
-
-
-
-
 int main(int argc, char** argv)
 {
   setTDRStyle();
@@ -63,13 +58,18 @@ int main(int argc, char** argv)
   int usePedestals = opts.GetOpt<int>("Input.usePedestals");
   std::string source = opts.GetOpt<std::string>("Input.sourceName");
   int useTrackInfo = opts.GetOpt<int>("Input.useTrackInfo");
-  
+  int useMCP = opts.GetOpt<int>("Input.useMCP");
+  std::string inputDirH4;
+
+  if (useMCP)
+    inputDirH4 = opts.GetOpt<std::string>("Input.inputDirH4");
+
   std::string discCalibrationFile = opts.GetOpt<std::string>("Input.discCalibration");
   TOFHIRThresholdZero thrZero(discCalibrationFile,1);
 
   TChain* tree = new TChain("data","data");
-  
-  
+  TTree* treeH4 = 0;
+
   std::stringstream ss(runs); 
   std::string token;
   while( std::getline(ss,token,',') )
@@ -93,11 +93,18 @@ int main(int argc, char** argv)
       std::cout << ">>> Adding file " << fileName << std::endl;
       tree -> Add(fileName.c_str());
       
-      struct stat t_stat;
+      if (useMCP)
+	{
+	  treeH4 = new TChain("h4","h4");
+  	  std::string fileNameH4 = Form("%s/%04d.root",inputDirH4.c_str(),run);
+	  treeH4 -> Add(fileNameH4.c_str());
+	}
+
+      // struct stat t_stat;
       //stat(Form("/data/TOFHIR2/raw/run%04d.rawf",run), &t_stat);
-      stat(Form("/data/tofhir2/h8/raw/%04d/",run), &t_stat);
-      struct tm * timeinfo = localtime(&t_stat.st_mtime);
-      std::cout << "Time and date of raw file of run" << run << ": " << asctime(timeinfo);
+      // stat(Form("/data/tofhir2/h8/raw/%04d/",run), &t_stat);
+      // struct tm * timeinfo = localtime(&t_stat.st_mtime);
+      // std::cout << "Time and date of raw file of run" << run << ": " << asctime(timeinfo);
     }
   }
   
@@ -131,8 +138,19 @@ int main(int argc, char** argv)
   std::vector<unsigned short>* t1fine = 0;
   
   int nhits;
+  int iev_H4DAQ;
+  int iev_TOFHIR;
   float x, y;
-  
+  unsigned long long t_TOFHIR,t_H4DAQ;
+
+  int MCP_H4;
+  int CFD_H4;
+  int CLK_P_H4;
+  int CLK_C_H4;
+  float amp_max_H4[100];
+  float time_H4[100];
+  float fit_time_H4[100];
+
   tree -> SetBranchStatus("*",0);
   tree -> SetBranchStatus("step1",  1); tree -> SetBranchAddress("step1",  &step1);
   tree -> SetBranchStatus("step2",  1); tree -> SetBranchAddress("step2",  &step2);
@@ -152,7 +170,23 @@ int main(int argc, char** argv)
     tree -> SetBranchStatus("x_WC", 1);     tree -> SetBranchAddress("x_WC",          &x);
     tree -> SetBranchStatus("y_WC", 1);     tree -> SetBranchAddress("y_WC",          &y);
   }
-  
+
+  if ( !opts.GetOpt<std::string>("Input.sourceName").compare("TB") && useMCP  ){
+    tree -> SetBranchStatus("iev_H4DAQ", 1); tree -> SetBranchAddress("iev_H4DAQ",  &iev_H4DAQ);
+    tree -> SetBranchStatus("iev_TOFHIR", 1); tree -> SetBranchAddress("iev_TOFHIR",  &iev_TOFHIR);
+    tree -> SetBranchStatus("t_H4DAQ", 1); tree -> SetBranchAddress("t_H4DAQ",  &t_H4DAQ);
+    tree -> SetBranchStatus("t_TOFHIR", 1); tree -> SetBranchAddress("t_TOFHIR",  &t_TOFHIR);
+
+    //from H4DAQ ntuple
+    treeH4->SetBranchStatus("MCP");treeH4->SetBranchAddress("MCP",&MCP_H4);
+    treeH4->SetBranchStatus("CFD");treeH4->SetBranchAddress("CFD",&CFD_H4);
+    treeH4->SetBranchStatus("CLK_P");treeH4->SetBranchAddress("CLK_P",&CLK_P_H4);
+    treeH4->SetBranchStatus("CLK_C");treeH4->SetBranchAddress("CLK_C",&CLK_C_H4);
+    treeH4->SetBranchStatus("amp_max");treeH4->SetBranchAddress("amp_max",amp_max_H4);
+    treeH4->SetBranchStatus("time");treeH4->SetBranchAddress("time",time_H4);
+    treeH4->SetBranchStatus("fit_time");treeH4->SetBranchAddress("fit_time",fit_time_H4);
+  }
+
 
   //--- get plot settings
   std::vector<float> Vov = opts.GetOpt<std::vector<float> >("Plots.Vov");
@@ -240,6 +274,7 @@ int main(int argc, char** argv)
       if( maxEntries > 0 ) nEntries = maxEntries;
       for(int entry = 0; entry < nEntries; ++entry){
 	tree -> GetEntry(entry);
+	
 	acceptEvent[entry] = false;
 	if( entry%200000 == 0 ){
 	  std::cout << "\n>>> external bar loop: reading entry " << entry << " / " << nEntries << " (" << 100.*entry/nEntries << "%)" << std::endl;
@@ -253,10 +288,8 @@ int main(int argc, char** argv)
 	if(!opts.GetOpt<std::string>("Input.vth").compare("vth1"))  { vth = vth1;}
 	if(!opts.GetOpt<std::string>("Input.vth").compare("vth2"))  { vth = vth2;}
 
-
 	if (channelIdx[chL_ext] <0 || channelIdx[chR_ext] <0) continue;
 	
-
 	// --- calculate energy sum/Nbars for module - useful to remove showering events/cross talk
 	if (!opts.GetOpt<std::string>("Input.sourceName").compare("TB")){
 
@@ -395,6 +428,8 @@ int main(int argc, char** argv)
   long long timeR[16];
   unsigned short t1fineL[16]; 
   unsigned short t1fineR[16]; 
+  float qT1L[16]; 
+  float qT1R[16]; 
   float energyL[16];
   float energyR[16];
   
@@ -407,8 +442,16 @@ int main(int argc, char** argv)
 	std::cout << "\n>>> 1st loop: reading entry " << entry << " / " << nEntries << " (" << 100.*entry/nEntries << "%)" << std::endl;
 	TrackProcess(cpu, mem, vsz, rss);
       }
-    
+
     if (useTrackInfo && nhits > 0 &&  (x < -100 || y < -100 ) ) continue;
+    //Get corresponding event in H4DAQ ntuple
+    if (useMCP && iev_H4DAQ>-1)
+      {
+	//std::cout << "Getting H4 " << iev_H4DAQ << "," << iev_TOFHIR << "," << t_H4DAQ << "," << t_TOFHIR << std::endl;
+	treeH4->GetEntry(iev_H4DAQ);
+	//std::cout << "time MCP" << time_H4[1] << std::endl;
+      }
+
 
     float Vov = step1;
     float vth1 = float(int(step2/10000)-1);
@@ -457,6 +500,8 @@ int main(int argc, char** argv)
 	timeR[iBar]=(*time)[channelIdx[chR[iBar]]];
 	t1fineL[iBar]=(*t1fine)[channelIdx[chL[iBar]]];
 	t1fineR[iBar]=(*t1fine)[channelIdx[chR[iBar]]];
+	qT1L[iBar]=(*qT1)[channelIdx[chL[iBar]]];
+	qT1R[iBar]=(*qT1)[channelIdx[chR[iBar]]];
 	}
       else
 	{
@@ -470,6 +515,8 @@ int main(int argc, char** argv)
 	  timeR[iBar]=-10;
 	  t1fineL[iBar]=-10;
 	  t1fineR[iBar]=-10;
+	  qT1L[iBar]=-10;
+	  qT1L[iBar]=-10;
 	}     
     }// end loop over bars
     
@@ -581,6 +628,8 @@ int main(int argc, char** argv)
 	  anEvent.timeR = timeR[iBar];
 	  anEvent.t1fineL = t1fineL[iBar];
 	  anEvent.t1fineR = t1fineR[iBar];
+	  anEvent.qT1L = qT1L[iBar];
+	  anEvent.qT1R = qT1R[iBar];
 	  if(useTrackInfo){
 	    anEvent.nhits = nhits;
 	    anEvent.x = x;
@@ -591,8 +640,20 @@ int main(int argc, char** argv)
 	    anEvent.x = -999.;
 	    anEvent.y = -999.;
 	  }
-	  
-	  
+
+	  if(useMCP && iev_H4DAQ>-1){
+	    anEvent.amp_MCP = amp_max_H4[MCP_H4];
+	    anEvent.t_MCP = time_H4[MCP_H4+CFD_H4];
+	    anEvent.t_CLK_P = fit_time_H4[CLK_P_H4];
+	    anEvent.t_CLK_C = fit_time_H4[CLK_C_H4];
+	  }
+	  else{
+	    anEvent.amp_MCP = -999;
+	    anEvent.t_MCP = -999;
+	    anEvent.t_CLK_P = -999;
+	    anEvent.t_CLK_C = -999;
+	  }
+
 	  outTrees[index] -> Fill();
 	  }	  
 	}
@@ -633,6 +694,8 @@ int main(int argc, char** argv)
 	anEvent.timeR = timeR[maxBar];
 	anEvent.t1fineL = t1fineL[maxBar];
 	anEvent.t1fineR = t1fineR[maxBar];
+	anEvent.qT1L = qT1L[maxBar];
+	anEvent.qT1R = qT1R[maxBar];
 	if(useTrackInfo){
 	  anEvent.nhits = nhits;
 	  anEvent.x = x;

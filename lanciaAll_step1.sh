@@ -57,11 +57,11 @@
 #./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-32C_Vov3.70.cfg
 
 # FBK 2E14 52deg, T = -40C 
-./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov1.70.cfg
-./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov2.00.cfg
-./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov2.50.cfg
-./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov3.00.cfg
-./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov3.50.cfg
+#./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov1.70.cfg
+#./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov2.00.cfg
+#./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov2.50.cfg
+#./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov3.00.cfg
+#./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-40C_Vov3.50.cfg
 
 # FBK 2E14 52deg, T = -22C 
 #./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_FBK_2E14_52deg_T-22C_Vov1.50.cfg
@@ -127,3 +127,6 @@
 #./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_HPK_2E14_52deg_T-40C_Vov1.80_coincBar12.cfg
 #./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_HPK_2E14_52deg_T-40C_Vov1.80_coincBar13.cfg
 #./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_HPK_2E14_52deg_T-40C_Vov1.80_coincBar14.cfg
+
+#HPK528 MCP
+./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_HPK528_unirr_52deg_T10C_Vov3.50_MCP.cfg
