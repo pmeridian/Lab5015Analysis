@@ -71,6 +71,7 @@ public:
   int barID;
   float Vov;
   int vth1;
+
   float energyL;
   float energyR;
   float totL;
@@ -81,6 +82,29 @@ public:
   unsigned short t1fineR;
   float qT1L;
   float qT1R;
+  
+  float barM_energyL;
+  float barM_energyR;
+  float barM_totL;
+  float barM_totR;
+  long long barM_timeL;
+  long long barM_timeR;
+  unsigned short barM_t1fineL;
+  unsigned short barM_t1fineR;
+  float barM_qT1L;
+  float barM_qT1R;
+
+  float barP_energyL;
+  float barP_energyR;
+  float barP_totL;
+  float barP_totR;
+  long long barP_timeL;
+  long long barP_timeR;
+  unsigned short barP_t1fineL;
+  unsigned short barP_t1fineR;
+  float barP_qT1L;
+  float barP_qT1R;
+  
   int nhits;
   float x;
   float y;

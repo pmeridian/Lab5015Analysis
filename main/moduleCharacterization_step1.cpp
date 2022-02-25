@@ -454,8 +454,9 @@ int main(int argc, char** argv)
 	    std::cout << "\n>>> 1st loop: run " << runNumbers[irun] << " reading entry " << entry << " / " << nEntries << " (" << 100.*entry/nEntries << "%)" << std::endl;
 	    TrackProcess(cpu, mem, vsz, rss);
 	  }
+	
+	if (useTrackInfo && ((nhits > 0 &&  (x < -100 || y < -100 )) || (iev_H4DAQ<0))) continue;
 
-	if (useTrackInfo && nhits > 0 &&  (x < -100 || y < -100 ) ) continue;
 	//Get corresponding event in H4DAQ ntuple
 	if (useMCP && iev_H4DAQ>-1)
 	  {
@@ -642,6 +643,62 @@ int main(int argc, char** argv)
 		  anEvent.t1fineR = t1fineR[iBar];
 		  anEvent.qT1L = qT1L[iBar];
 		  anEvent.qT1R = qT1R[iBar];
+
+
+		  if(iBar>0)
+		    {
+		       anEvent.barM_energyL = energyL[iBar-1];
+		       anEvent.barM_energyR = energyR[iBar-1];
+		       anEvent.barM_totL = totL[iBar-1];
+		       anEvent.barM_totR = totR[iBar-1];
+		       anEvent.barM_timeL = timeL[iBar-1];
+		       anEvent.barM_timeR = timeR[iBar-1];
+		       anEvent.barM_t1fineL = t1fineL[iBar-1];
+		       anEvent.barM_t1fineR = t1fineR[iBar-1];
+		       anEvent.barM_qT1L = qT1L[iBar-1];
+		       anEvent.barM_qT1R = qT1R[iBar-1];
+		    }
+		  else
+		    {
+		      anEvent.barM_energyL = -999.;
+		      anEvent.barM_energyR = -999;
+		      anEvent.barM_totL = -999;
+		      anEvent.barM_totR = -999;
+		      anEvent.barM_timeL = -999;
+		      anEvent.barM_timeR = -999;
+		      anEvent.barM_t1fineL = -999;
+		      anEvent.barM_t1fineR = -999;
+		      anEvent.barM_qT1L = -999;
+		      anEvent.barM_qT1R = -999;
+		    }
+
+		  if (iBar<(channelMapping.size()/2-1))
+		    {
+		      anEvent.barP_energyL = energyL[iBar+1];
+		      anEvent.barP_energyR = energyR[iBar+1];
+		      anEvent.barP_totL = totL[iBar+1];
+		      anEvent.barP_totR = totR[iBar+1];
+		      anEvent.barP_timeL = timeL[iBar+1];
+		      anEvent.barP_timeR = timeR[iBar+1];
+		      anEvent.barP_t1fineL = t1fineL[iBar+1];
+		      anEvent.barP_t1fineR = t1fineR[iBar+1];
+		      anEvent.barP_qT1L = qT1L[iBar+1];
+		      anEvent.barP_qT1R = qT1R[iBar+1];
+		    }
+		  else
+		    {
+		      anEvent.barP_energyL = -999.;
+		      anEvent.barP_energyR = -999;
+		      anEvent.barP_totL = -999;
+		      anEvent.barP_totR = -999;
+		      anEvent.barP_timeL = -999;
+		      anEvent.barP_timeR = -999;
+		      anEvent.barP_t1fineL = -999;
+		      anEvent.barP_t1fineR = -999;
+		      anEvent.barP_qT1L = -999;
+		      anEvent.barP_qT1R = -999;
+		    }
+
 		  if(useTrackInfo){
 		    anEvent.nhits = nhits;
 		    anEvent.x = x;
@@ -708,6 +765,61 @@ int main(int argc, char** argv)
 	    anEvent.t1fineR = t1fineR[maxBar];
 	    anEvent.qT1L = qT1L[maxBar];
 	    anEvent.qT1R = qT1R[maxBar];
+
+	    if (maxBar-1>=0)
+	      {
+		anEvent.barM_energyL = energyL[maxBar-1];
+		anEvent.barM_energyR = energyR[maxBar-1];
+		anEvent.barM_totL = totL[maxBar-1];
+		anEvent.barM_totR = totR[maxBar-1];
+		anEvent.barM_timeL = timeL[maxBar-1];
+		anEvent.barM_timeR = timeR[maxBar-1];
+		anEvent.barM_t1fineL = t1fineL[maxBar-1];
+		anEvent.barM_t1fineR = t1fineR[maxBar-1];
+		anEvent.barM_qT1L = qT1L[maxBar-1];
+		anEvent.barM_qT1R = qT1R[maxBar-1];
+	      }
+	    else
+	      {
+		anEvent.barM_energyL = -999.;
+		anEvent.barM_energyR = -999;
+		anEvent.barM_totL = -999;
+		anEvent.barM_totR = -999;
+		anEvent.barM_timeL = -999;
+		anEvent.barM_timeR = -999;
+		anEvent.barM_t1fineL = -999;
+		anEvent.barM_t1fineR = -999;
+		anEvent.barM_qT1L = -999;
+		anEvent.barM_qT1R = -999;
+	      }
+	    
+	    if (maxBar+1<channelMapping.size()/2)
+	      {
+		anEvent.barP_energyL = energyL[maxBar+1];
+		anEvent.barP_energyR = energyR[maxBar+1];
+		anEvent.barP_totL = totL[maxBar+1];
+		anEvent.barP_totR = totR[maxBar+1];
+		anEvent.barP_timeL = timeL[maxBar+1];
+		anEvent.barP_timeR = timeR[maxBar+1];
+		anEvent.barP_t1fineL = t1fineL[maxBar+1];
+		anEvent.barP_t1fineR = t1fineR[maxBar+1];
+		anEvent.barP_qT1L = qT1L[maxBar+1];
+		anEvent.barP_qT1R = qT1R[maxBar+1];
+	      }
+	    else
+	      {
+		anEvent.barP_energyL = -999.;
+		anEvent.barP_energyR = -999;
+		anEvent.barP_totL = -999;
+		anEvent.barP_totR = -999;
+		anEvent.barP_timeL = -999;
+		anEvent.barP_timeR = -999;
+		anEvent.barP_t1fineL = -999;
+		anEvent.barP_t1fineR = -999;
+		anEvent.barP_qT1L = -999;
+		    anEvent.barP_qT1R = -999;
+	      }
+		
 	    if(useTrackInfo){
 	      anEvent.nhits = nhits;
 	      anEvent.x = x;

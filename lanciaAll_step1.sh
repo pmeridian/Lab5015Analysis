@@ -130,3 +130,4 @@
 
 #HPK528 MCP
 ./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_HPK528_unirr_52deg_T10C_Vov3.50_MCP.cfg
+#./bin/moduleCharacterization_step1.exe cfg/moduleCharacterization_HPK528_unirr_52deg_T10C_Vov3.50_MCP_pions.cfg
