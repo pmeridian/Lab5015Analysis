@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     
       for(int run = runMin; run <= runMax; ++run) {
 	std::string fileName;
-	if( !usePedestals ) fileName = Form("%s/%04d/*_e.root",inputDir.c_str(),run);
+	if( !usePedestals ) fileName = Form("%s/run%05d_e.root",inputDir.c_str(),run);
 	//else                fileName = Form("%s/%s%04d_*ped_e.root",inputDir.c_str(),fileBaseName.c_str(),run);
 	else                fileName = Form("%s/%04d/*ped_e.root",inputDir.c_str(),run);
 	runNumbers.push_back(run);
@@ -98,7 +98,7 @@ int main(int argc, char** argv)
 	if (useMCP)
 	  {
 	    treeH4.push_back(new TChain("h4","h4"));
-	    std::string fileNameH4 = Form("%s/%04d.root",inputDirH4.c_str(),run);
+	    std::string fileNameH4 = Form("%s/%d.root",inputDirH4.c_str(),run);
 	    treeH4.back()->Add(fileNameH4.c_str());
 	  }
 
@@ -111,47 +111,22 @@ int main(int argc, char** argv)
     }
   
      
-  //--- define channels (read mapping from the configuration file)
-  std::vector<unsigned int> channelMapping = opts.GetOpt<std::vector<unsigned int> >("Channels.channelMapping");
-  
-  int chL[16];
-  int chR[16];
-  
-  for(unsigned int iBar = 0; iBar < channelMapping.size()/2; ++iBar){
-    if(opts.GetOpt<int>("Channels.array")==0){
-      chL[iBar] = channelMapping[iBar*2+0];
-      chR[iBar] = channelMapping[iBar*2+1];
-    }
-    if(opts.GetOpt<int>("Channels.array")==1){
-      chL[iBar] = channelMapping[iBar*2+0]+64;
-      chR[iBar] = channelMapping[iBar*2+1]+64;
-    }
-    std::cout << "Bar: " << iBar << "   chL: "<< chL[iBar] << "    chR: " <<chR[iBar] <<std::endl;
-  }
   
   //--- define branches
   float step1, step2;
-  int channelIdx[128];
+  int channelIdx[256];
   std::vector<unsigned short> *qfine = 0;
   std::vector<float> *tot = 0;
   std::vector<float> *energy = 0;
   std::vector<long long> *time = 0;
   std::vector<float>* qT1 = 0;
   std::vector<unsigned short>* t1fine = 0;
-  
   int nhits;
-  int iev_H4DAQ;
-  int iev_TOFHIR;
   float x, y;
-  unsigned long long t_TOFHIR,t_H4DAQ;
-
-  int MCP_H4;
-  int CFD_H4;
-  int CLK_P_H4;
-  int CLK_C_H4;
-  float amp_max_H4[100];
-  float time_H4[100];
-  float fit_time_H4[100];
+  int iev_SCOPE;
+  int iev_TRACKER;
+  int iev_TOFHIR; 
+  double t_TOFHIR;
 
   for (auto& tr: tree)
     { 
@@ -170,30 +145,42 @@ int main(int argc, char** argv)
       tr -> SetBranchStatus("t1fine",    1); tr -> SetBranchAddress("t1fine",   &t1fine);
       
       if ( !opts.GetOpt<std::string>("Input.sourceName").compare("TB") &&  useTrackInfo ){
-	tr -> SetBranchStatus("nhits_WC", 1); tr -> SetBranchAddress("nhits_WC",  &nhits);
-	tr -> SetBranchStatus("x_WC", 1);     tr -> SetBranchAddress("x_WC",          &x);
-	tr -> SetBranchStatus("y_WC", 1);     tr -> SetBranchAddress("y_WC",          &y);
+	tr -> SetBranchStatus("nplanes", 1); tr -> SetBranchAddress("nplanes",  &nhits);
+	tr -> SetBranchStatus("x_dut", 1);     tr -> SetBranchAddress("x_dut",          &x);
+	tr -> SetBranchStatus("y_dut", 1);     tr -> SetBranchAddress("y_dut",          &y);
       }
       
       if ( !opts.GetOpt<std::string>("Input.sourceName").compare("TB") && useMCP  ){
-	tr -> SetBranchStatus("iev_H4DAQ", 1); tr -> SetBranchAddress("iev_H4DAQ",  &iev_H4DAQ);
+	tr -> SetBranchStatus("iev_SCOPE", 1); tr -> SetBranchAddress("iev_SCOPE",  &iev_SCOPE);
+	tr -> SetBranchStatus("iev_TRACKER", 1); tr -> SetBranchAddress("iev_TRACKER",  &iev_TRACKER);
 	tr -> SetBranchStatus("iev_TOFHIR", 1); tr -> SetBranchAddress("iev_TOFHIR",  &iev_TOFHIR);
-	tr -> SetBranchStatus("t_H4DAQ", 1); tr -> SetBranchAddress("t_H4DAQ",  &t_H4DAQ);
+	// tr -> SetBranchStatus("t_H4DAQ", 1); tr -> SetBranchAddress("t_H4DAQ",  &t_H4DAQ);
 	tr -> SetBranchStatus("t_TOFHIR", 1); tr -> SetBranchAddress("t_TOFHIR",  &t_TOFHIR);
+
       }
     }
-
+  
+  int MCP_H4;
+  int CFD_H4;
+  int TOFCLK_P_H4;
+  int TOFCLK_M_H4;
+  float amp_max_H4[100];
+  float time_H4[100];
+  float fit_time_H4[100];
+  float fit_terr_H4[100];
+  
   if ( !opts.GetOpt<std::string>("Input.sourceName").compare("TB") && useMCP  ){
-    for (auto& tr: treeH4)
+    for (auto& trH4: treeH4)
       {
 	//from H4DAQ ntuple
-	tr->SetBranchStatus("MCP");tr->SetBranchAddress("MCP",&MCP_H4);
-	tr->SetBranchStatus("CFD");tr->SetBranchAddress("CFD",&CFD_H4);
-	tr->SetBranchStatus("CLK_P");tr->SetBranchAddress("CLK_P",&CLK_P_H4);
-	tr->SetBranchStatus("CLK_C");tr->SetBranchAddress("CLK_C",&CLK_C_H4);
-	tr->SetBranchStatus("amp_max");tr->SetBranchAddress("amp_max",amp_max_H4);
-	tr->SetBranchStatus("time");tr->SetBranchAddress("time",time_H4);
-	tr->SetBranchStatus("fit_time");tr->SetBranchAddress("fit_time",fit_time_H4);
+	trH4->SetBranchStatus("CFD",1);trH4->SetBranchAddress("CFD",&CFD_H4);
+	trH4->SetBranchStatus("MCP",1);trH4->SetBranchAddress("MCP",&MCP_H4);
+	trH4->SetBranchStatus("TOFCLK_P",1);trH4->SetBranchAddress("TOFCLK_P",&TOFCLK_P_H4);
+	trH4->SetBranchStatus("TOFCLK_M",1);trH4->SetBranchAddress("TOFCLK_M",&TOFCLK_M_H4);
+	trH4->SetBranchStatus("amp_max",1);trH4->SetBranchAddress("amp_max",amp_max_H4);
+	trH4->SetBranchStatus("time",1);trH4->SetBranchAddress("time",time_H4);
+	trH4->SetBranchStatus("fit_time",1);trH4->SetBranchAddress("fit_time",fit_time_H4);
+	trH4->SetBranchStatus("fit_terr",1);trH4->SetBranchAddress("fit_terr",fit_terr_H4);
       }
   }
 
@@ -214,6 +201,23 @@ int main(int argc, char** argv)
     }
   
   //float vetoEnergyThreshold = opts.GetOpt<float>("Plots.vetoEnergyThreshold");   
+
+  //--- define channels (read mapping from the configuration file)
+  std::vector<unsigned int> channelMapping = opts.GetOpt<std::vector<unsigned int> >("Channels.channelMapping");
+  int chL[16];
+  int chR[16];
+  
+  for(unsigned int iBar = 0; iBar < channelMapping.size()/2; ++iBar){
+    if(opts.GetOpt<int>("Channels.array")==0){
+      chL[iBar] = channelMapping[iBar*2+0];
+      chR[iBar] = channelMapping[iBar*2+1];
+    }
+    if(opts.GetOpt<int>("Channels.array")==1){
+      chL[iBar] = channelMapping[iBar*2+0]+64;
+      chR[iBar] = channelMapping[iBar*2+1]+64;
+    }
+    std::cout << "Bar: " << iBar << "   chL: "<< chL[iBar] << "    chR: " <<chR[iBar] <<std::endl;
+  }
 
 
   // -- read minimum energy for each bar from file
@@ -288,7 +292,7 @@ int main(int argc, char** argv)
 	      std::cout << "\n>>> external bar loop: run " << runNumbers[irun] << " reading entry " << entry << " / " << nEntries << " (" << 100.*entry/nEntries << "%)" << std::endl;
 	      TrackProcess(cpu, mem, vsz, rss);
 	    }
-      
+	    
 	    float Vov = step1;
 	    float vth1 = float(int(step2/10000)-1);
 	    float vth2 = float(int((step2-10000*(vth1+1))/100.)-1);
@@ -423,8 +427,6 @@ int main(int argc, char** argv)
     }
 
     
-  
-  
   //------------------------
   //--- 1st loop over events
   
@@ -442,27 +444,30 @@ int main(int argc, char** argv)
   float qT1R[16]; 
   float energyL[16];
   float energyR[16];
+
   
   for (int irun=0;irun<tree.size();++irun)
     {
       int nEntries = tree[irun]->GetEntries();
       if( maxEntries > 0 ) nEntries = maxEntries;
+
       for(int entry = 0; entry < nEntries; ++entry) {
 	tree[irun] -> GetEntry(entry);
-	if( entry%200000 == 0 )
+
+	if( entry%100000 == 0 )
 	  {
 	    std::cout << "\n>>> 1st loop: run " << runNumbers[irun] << " reading entry " << entry << " / " << nEntries << " (" << 100.*entry/nEntries << "%)" << std::endl;
 	    TrackProcess(cpu, mem, vsz, rss);
 	  }
 	
-	if (useTrackInfo && ((nhits > 0 &&  (x < -100 || y < -100 )) || (iev_H4DAQ<0))) continue;
+	if (useTrackInfo && ((nhits > 0 &&  (x < -100 || y < -100 )) || (iev_SCOPE<0))) continue;
 
 	//Get corresponding event in H4DAQ ntuple
-	if (useMCP && iev_H4DAQ>-1)
+	if (useMCP && iev_SCOPE>-1)
 	  {
-	    // std::cout << "Getting H4 " << iev_H4DAQ << "," << iev_TOFHIR << "," << t_H4DAQ << "," << t_TOFHIR << std::endl;
-	    treeH4[irun]->GetEntry(iev_H4DAQ);
-	    // std::cout << "time MCP" << time_H4[1] << std::endl;
+	    // std::cout << "Getting H4 " << iev_SCOPE << "," << iev_TOFHIR << "," << t_TOFHIR << std::endl;
+	    treeH4[irun]->GetEntry(iev_SCOPE);
+	    // std::cout << "CLK_P phase" << fit_time_H4[TOFCLK_P_H4] << std::endl;
 	  }
 
 
@@ -497,12 +502,11 @@ int main(int argc, char** argv)
 	      continue;
 	    }
 	  }
-    
+
+  
     
 	for(unsigned int iBar = 0; iBar < channelMapping.size()/2; ++iBar){
-
 	  if (channelIdx[chL[iBar]] >=0 && channelIdx[chR[iBar]] >=0){
-	  
 	    qfineL[iBar]=(*qfine)[channelIdx[chL[iBar]]];
 	    qfineR[iBar]=(*qfine)[channelIdx[chR[iBar]]];
 	    totL[iBar]=0.001*(*tot)[channelIdx[chL[iBar]]];
@@ -710,17 +714,19 @@ int main(int argc, char** argv)
 		    anEvent.y = -999.;
 		  }
 
-		  if(useMCP && iev_H4DAQ>-1){
+		  if(useMCP && iev_SCOPE>-1){
 		    anEvent.amp_MCP = amp_max_H4[MCP_H4];
-		    anEvent.t_MCP = time_H4[MCP_H4+CFD_H4];
-		    anEvent.t_CLK_P = fit_time_H4[CLK_P_H4];
-		    anEvent.t_CLK_C = fit_time_H4[CLK_C_H4];
+		    anEvent.t_MCP = fit_time_H4[MCP_H4];
+		    anEvent.t_CFD_MCP = time_H4[MCP_H4+CFD_H4];
+		    anEvent.t_CLK_P = fit_time_H4[TOFCLK_P_H4];
+		    anEvent.t_CLK_M = fit_time_H4[TOFCLK_M_H4];
 		  }
 		  else{
 		    anEvent.amp_MCP = -999;
 		    anEvent.t_MCP = -999;
+		    anEvent.t_CFD_MCP = -999;
 		    anEvent.t_CLK_P = -999;
-		    anEvent.t_CLK_C = -999;
+		    anEvent.t_CLK_M = -999;
 		  }
 
 		  outTrees[index] -> Fill();

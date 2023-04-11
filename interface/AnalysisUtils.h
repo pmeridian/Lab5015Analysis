@@ -105,14 +105,17 @@ public:
   float barP_qT1L;
   float barP_qT1R;
   
+  //tracker information
   int nhits;
   float x;
   float y;
 
+  //MCP information
   float amp_MCP;
   float t_MCP;
+  float t_CFD_MCP;
   float t_CLK_P;
-  float t_CLK_C;
+  float t_CLK_M;
   ClassDef(ModuleEventClass,1);
 };
 
